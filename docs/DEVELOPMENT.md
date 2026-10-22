@@ -26,7 +26,7 @@ npm test
 
 ## Desktop validation
 
-`npm run test:e2e` launches the actual production-built app with a temporary profile. Native file dialogs are deterministically stubbed in the test process; file I/O, Electron IPC, editing, conversion, recovery and PDF generation remain real. No development backdoor is added to the renderer. Linux test launches disable Chromium's outer sandbox only for the already-isolated test container; production BrowserWindows retain sandbox/context isolation.
+`npm run test:e2e` launches the actual production-built app with a temporary profile. Native file dialogs and spelling-menu popup presentation are deterministically stubbed in the test process; file I/O, Electron IPC, editing, conversion, recovery and PDF generation remain real. No development backdoor is added to the renderer. Linux test launches disable Chromium's outer sandbox only for the already-isolated test container; production BrowserWindows retain sandbox/context isolation.
 
 Use an existing X11 display or Xvfb. This cloud machine lacked Xvfb but had Xorg's dummy driver. A task-local config at `/tmp/beasttext-xorg.conf` starts display `:99` via Xorg. That display process must restart in a new machine; it is not a retained dependency. Do not expose localhost as a user-facing web preview.
 

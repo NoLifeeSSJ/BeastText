@@ -8,6 +8,8 @@ import {
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 let app: ElectronApplication, page: Page, root: string;
 async function launch() {
   app = await electron.launch({
@@ -19,6 +21,10 @@ async function launch() {
     },
   });
   page = await app.firstWindow();
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].focus(),
+  );
+  await page.bringToFront();
   await expect(page.getByText("What will you write today?")).toBeVisible();
 }
 async function nativeDialog(savePath: string) {
@@ -31,9 +37,12 @@ test.beforeEach(async () => {
   await launch();
 });
 test.afterEach(async () => {
-  const ended = new Promise((r) => app.process().once("exit", r));
-  await app?.evaluate(({ app }) => app.exit(0)).catch(() => {});
-  await ended;
+  const process = app?.process();
+  if (process && process.exitCode === null && process.signalCode === null) {
+    const ended = new Promise((r) => process.once("exit", r));
+    await app.evaluate(({ app }) => app.exit(0)).catch(() => {});
+    await ended;
+  }
   await fs.rm(root, {
     recursive: true,
     force: true,
@@ -68,13 +77,9 @@ test("real editor: formatting, structure, image, table, comment, undo, find, nat
   await page.getByRole("button", { name: "Replace all", exact: true }).click();
   await expect(editor).toContainText("Find the idea. Find the idea.");
   await page.getByRole("button", { name: "Close find", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Undo (Ctrl+Z)", exact: true })
-    .click();
+  await editor.press("Control+z");
   await expect(editor).toContainText("needle");
-  await page
-    .getByRole("button", { name: "Redo (Ctrl+Y)", exact: true })
-    .click();
+  await editor.press("Control+y");
   await expect(editor).toContainText("idea");
   await page.getByRole("button", { name: "Insert", exact: true }).click();
   await page.getByRole("button", { name: "Insert table", exact: true }).click();
@@ -209,8 +214,19 @@ test("recovery survives an unexpected process exit and restores untitled content
       { timeout: 12000 },
     )
     .toBe(1);
-  app.process().kill("SIGKILL");
-  await new Promise((r) => app.process().once("exit", r));
+  const processToCrash = app.process();
+  const crashed = new Promise((resolve) =>
+    processToCrash.once("exit", resolve),
+  );
+  if (process.platform === "win32")
+    await promisify(execFile)("taskkill", [
+      "/PID",
+      String(processToCrash.pid),
+      "/T",
+      "/F",
+    ]);
+  else processToCrash.kill("SIGKILL");
+  await crashed;
   await launch();
   await expect(page.getByText("Pick up where you left off")).toBeVisible();
   await page.getByRole("button", { name: "Recover as new" }).click();
@@ -296,10 +312,15 @@ test("saved comments and resolved state survive native reopen; save-as/copy pres
   await nativeDialog(copy);
   await page.getByRole("button", { name: "Save a Copy", exact: true }).click();
   await expect(page.getByText("A separate copy was saved.")).toBeVisible();
-  await expect(
-    page.getByText("review.beasttext", { exact: true }),
-  ).toBeVisible();
   expect((await fs.stat(copy)).size).toBeGreaterThan(100);
+  const originalBytes = await fs.readFile(saved),
+    copyBytes = await fs.readFile(copy);
+  await editor.press("Control+End");
+  await editor.pressSequentially(" Keep saving to the original file.");
+  await editor.press("Control+s");
+  await expect(page.getByText("Document saved safely.")).toBeVisible();
+  expect(await fs.readFile(saved)).not.toEqual(originalBytes);
+  expect(await fs.readFile(copy)).toEqual(copyBytes);
 });
 test("bundled offline spelling initialises and returns local suggestions", async () => {
   await expect
@@ -313,8 +334,19 @@ test("bundled offline spelling initialises and returns local suggestions", async
     .toBe(true);
   await page.getByRole("button", { name: "New document", exact: true }).click();
   const editor = page.getByRole("textbox", { name: "Document editor" });
+  // Inspect real Chromium spelling results without opening a native OS popup,
+  // which CDP keyboard input cannot reliably dismiss on a Windows runner.
+  await app.evaluate(({ Menu }) => {
+    Menu.prototype.popup = () => {};
+  });
   await editor.click();
   await editor.pressSequentially("speling ", { delay: 80 });
+  const point = await editor.locator("p").evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const rect = range.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  });
   const suggestionEvent = app.evaluate(
     ({ BrowserWindow }) =>
       new Promise<{ word: string; suggestions: string[] }>((resolve) =>
@@ -328,14 +360,12 @@ test("bundled offline spelling initialises and returns local suggestions", async
         ),
       ),
   );
-  await editor
-    .locator("p")
-    .click({ button: "right", position: { x: 20, y: 10 } });
+  await page.mouse.click(point.x, point.y, { button: "right" });
   let result = await suggestionEvent;
   await page.keyboard.press("Escape");
   await expect
     .poll(async () => {
-      if (result.word === "speling")
+      if (result.word === "speling" && result.suggestions.length > 0)
         return result.suggestions.map((s) => s.toLowerCase());
       const event = app.evaluate(
         ({ BrowserWindow }) =>
@@ -350,9 +380,7 @@ test("bundled offline spelling initialises and returns local suggestions", async
             ),
           ),
       );
-      await editor
-        .locator("p")
-        .click({ button: "right", position: { x: 20, y: 10 } });
+      await page.mouse.click(point.x, point.y, { button: "right" });
       result = await event;
       await page.keyboard.press("Escape");
       return result.suggestions.map((s) => s.toLowerCase());

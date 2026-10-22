@@ -6,7 +6,7 @@ Validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Ele
 
 - TypeScript check, Vite renderer build, bundled Electron main/preload: passed.
 - Unit/integration suite: **15 tests passed**, no skips/expected failures. Native round-trip, built-in templates, ZIP safety/unsupported versions/checksums, unsafe content, Unicode counts, atomic writes/failure preservation, external fingerprints, untitled recovery, backup retention, DOCX/Markdown conversion and embedded line breaks.
-- Electron user journeys: **7 tests passed**, no skips/expected failures. Actual application processes and IPC/file operations; only native file chooser decisions are stubbed.
+- Electron user journeys: **7 tests passed**, no skips/expected failures. Actual application processes and IPC/file operations; native file chooser decisions and spelling-menu presentation are stubbed; spelling results still come from Chromium.
   1. Create/format, heading, table typing/Tab navigation, image, page break, find/replace, undo/redo, native save, close and reopen with rich content preserved.
   2. Anchored comment creation, native save, external modification, refused overwrite, cancelled close.
   3. Actual PDF and DOCX export; generated PDF opens in print-preview window.
