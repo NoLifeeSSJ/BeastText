@@ -22,20 +22,20 @@ jobs:
       - run: npm exec install-electron -- --no
       - run: npm run build
       - run: npm test
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --reporter=list,github
       - run: npm run package:win
       - name: Install, reinstall, shortcut and uninstall checks
         shell: pwsh
         run: ./scripts/verify-windows.ps1
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: BeastText-Windows-x64
           path: |
             release/*.zip
             release/release.json
             release/*BeastText.ps1
-            test-results/*.pdf
-            test-results/*.png
+            test-results/**
       - name: Publish tagged Windows prerelease
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
