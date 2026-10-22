@@ -1,8 +1,8 @@
-BeastText 1.0.2 is an unsigned Windows x64 prerelease of the offline document editor.
+BeastText 1.0.3 is an unsigned Windows x64 prerelease of the offline document editor.
 
 Includes rich text and named paragraph styles, document tabs, heading navigation, find/replace, tables, embedded images, comments, twelve templates, native .beasttext documents, atomic saving, rotating backups, crash recovery, DOCX/HTML/Markdown/text conversion, PDF export and paginated preview.
 
-Download `Install-BeastText.ps1`, `release.json` and `BeastText-1.0.2-win-x64.zip` together, then run the installer in PowerShell. It verifies the ZIP's SHA-256 and installs under `C:\BeastTextV1\App`; Node.js and Microsoft Word are not required. Settings and recovery live separately in `%APPDATA%\BeastText`.
+Download `Install-BeastText.ps1`, `release.json` and `BeastText-1.0.3-win-x64.zip` together, then run the installer in PowerShell. It verifies the ZIP's SHA-256 and installs under `C:\BeastTextV1\App`; Node.js and Microsoft Word are not required. Settings and recovery live separately in `%APPDATA%\BeastText`.
 
 The installer also accepts `-ManifestUrl` for HTTPS release metadata, `-DesktopShortcut`, `-Launch`, and a writable `-Root` location.
 

@@ -63,6 +63,16 @@ test("real editor: formatting, structure, image, table, comment, undo, find, nat
     () => new Promise<void>((r) => requestAnimationFrame(() => r())),
   );
   await editor.press("Control+End");
+  // Native caret movement reaches ProseMirror through an async selection event.
+  // Wait for that acknowledgement before the next key, rather than racing it.
+  await expect
+    .poll(() =>
+      editor.evaluate((element: any) => {
+        const { doc, selection } = element.editor.state;
+        return selection.empty && selection.to === doc.content.size - 1;
+      }),
+    )
+    .toBe(true);
   await editor.press("Enter");
   await expect(editor.locator("p")).toHaveCount(2);
   await page.getByRole("button", { name: "Heading 1", exact: true }).click();
