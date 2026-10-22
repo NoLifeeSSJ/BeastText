@@ -334,10 +334,13 @@ test("bundled offline spelling initialises and returns local suggestions", async
     .toBe(true);
   await page.getByRole("button", { name: "New document", exact: true }).click();
   const editor = page.getByRole("textbox", { name: "Document editor" });
-  // Inspect real Chromium spelling results without opening a native OS popup,
-  // which CDP keyboard input cannot reliably dismiss on a Windows runner.
+  // The app builds the real menu and corrections. Only OS popup presentation
+  // is replaced, because CDP cannot interact with a Windows native menu.
   await app.evaluate(({ Menu }) => {
-    Menu.prototype.popup = () => {};
+    (globalThis as any).__beastSpellingMenu = null;
+    Menu.prototype.popup = function () {
+      (globalThis as any).__beastSpellingMenu = this;
+    };
   });
   await editor.click();
   await editor.pressSequentially("speling ", { delay: 80 });
@@ -347,43 +350,21 @@ test("bundled offline spelling initialises and returns local suggestions", async
     const rect = range.getBoundingClientRect();
     return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
   });
-  const suggestionEvent = app.evaluate(
-    ({ BrowserWindow }) =>
-      new Promise<{ word: string; suggestions: string[] }>((resolve) =>
-        BrowserWindow.getAllWindows()[0].webContents.once(
-          "context-menu",
-          (_event, p) =>
-            resolve({
-              word: p.misspelledWord,
-              suggestions: p.dictionarySuggestions,
-            }),
+  await page.mouse.click(point.x, point.y, { button: "right" });
+  await expect
+    .poll(() =>
+      app.evaluate(() =>
+        ((globalThis as any).__beastSpellingMenu?.items ?? []).map(
+          (item: any) => item.label.toLowerCase(),
         ),
       ),
-  );
-  await page.mouse.click(point.x, point.y, { button: "right" });
-  let result = await suggestionEvent;
-  await page.keyboard.press("Escape");
-  await expect
-    .poll(async () => {
-      if (result.word === "speling" && result.suggestions.length > 0)
-        return result.suggestions.map((s) => s.toLowerCase());
-      const event = app.evaluate(
-        ({ BrowserWindow }) =>
-          new Promise<{ word: string; suggestions: string[] }>((resolve) =>
-            BrowserWindow.getAllWindows()[0].webContents.once(
-              "context-menu",
-              (_event, p) =>
-                resolve({
-                  word: p.misspelledWord,
-                  suggestions: p.dictionarySuggestions,
-                }),
-            ),
-          ),
-      );
-      await page.mouse.click(point.x, point.y, { button: "right" });
-      result = await event;
-      await page.keyboard.press("Escape");
-      return result.suggestions.map((s) => s.toLowerCase());
-    })
+    )
     .toContain("spelling");
+  await app.evaluate(() => {
+    const menu = (globalThis as any).__beastSpellingMenu;
+    menu.items
+      .find((item: any) => item.label.toLowerCase() === "spelling")
+      .click();
+  });
+  await expect(editor).toHaveText("spelling ");
 });

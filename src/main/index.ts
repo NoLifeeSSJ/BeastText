@@ -30,12 +30,14 @@ import {
   SafetyStore,
 } from "./storage";
 import { importDocx, exportDocx, markdownExport } from "./conversion";
+import { LocalSpelling, editorWordAtPoint } from "./spelling";
 app.setPath("userData", path.join(app.getPath("appData"), "BeastText"));
 if (process.env.BEASTTEXT_DATA)
   app.setPath("userData", path.resolve(process.env.BEASTTEXT_DATA));
 app.setName("BeastText");
 app.setAppUserModelId("com.beastapps.beasttext");
 let spellingReady = false;
+let spelling: LocalSpelling;
 let main: BrowserWindow;
 let closeAllowed = false;
 let safety: SafetyStore;
@@ -312,6 +314,9 @@ async function initialise() {
   app.on("will-quit", () => dictionaryServer.close());
   safety = new SafetyStore(root());
   await safety.initialise();
+  spelling = new LocalSpelling(dictionaries, root());
+  await spelling.initialise();
+  spellingReady = true;
   try {
     const s = JSON.parse(
       await fs.readFile(path.join(root(), "settings.json"), "utf8"),
@@ -372,28 +377,66 @@ async function initialise() {
     session.defaultSession.setSpellCheckerLanguages([
       preferences.settings.spellLanguage,
     ]);
-  main.webContents.on("context-menu", (_event, params) => {
-    const items: Electron.MenuItemConstructorOptions[] = [];
-    for (const suggestion of params.dictionarySuggestions)
-      items.push({
-        label: suggestion,
-        click: () => main.webContents.replaceMisspelling(suggestion),
-      });
-    if (params.misspelledWord)
-      items.push({
-        label: "Add to personal dictionary",
-        click: () =>
-          session.defaultSession.addWordToSpellCheckerDictionary(
-            params.misspelledWord,
-          ),
-      });
-    items.push(
-      { role: "cut" },
-      { role: "copy" },
-      { role: "paste" },
-      { role: "selectAll" },
-    );
-    Menu.buildFromTemplate(items).popup({ window: main });
+  main.webContents.on("context-menu", async (_event, params) => {
+    try {
+      let word = params.misspelledWord;
+      let selectedInEditor = false;
+      if (
+        !word &&
+        params.isEditable &&
+        !/\s/.test(params.selectionText.trim())
+      ) {
+        const atPoint = await main.webContents.executeJavaScript(
+          `(${editorWordAtPoint.toString()})(${Number(params.x)},${Number(params.y)})`,
+        );
+        if (
+          atPoint &&
+          !spelling.correct(atPoint, preferences.settings.spellLanguage)
+        ) {
+          word = atPoint;
+          const selected = await main.webContents.executeJavaScript(
+            `(${editorWordAtPoint.toString()})(${Number(params.x)},${Number(params.y)},true,${JSON.stringify(word)})`,
+          );
+          selectedInEditor = selected === word;
+        }
+      }
+      const items: Electron.MenuItemConstructorOptions[] = [];
+      if (word && !spelling.correct(word, preferences.settings.spellLanguage)) {
+        for (const suggestion of spelling.suggestions(
+          word,
+          preferences.settings.spellLanguage,
+        ))
+          items.push({
+            label: suggestion,
+            click: () => {
+              if (selectedInEditor)
+                void main.webContents.insertText(suggestion);
+              else main.webContents.replaceMisspelling(suggestion);
+            },
+          });
+        items.push({
+          label: "Add to personal dictionary",
+          click: () => {
+            void spelling
+              .add(word)
+              .then(() => {
+                session.defaultSession.addWordToSpellCheckerDictionary(word);
+                main.webContents.send("beast:dictionaryChanged");
+              })
+              .catch(() => log("Could not save personal dictionary"));
+          },
+        });
+      }
+      items.push(
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" },
+      );
+      Menu.buildFromTemplate(items).popup({ window: main });
+    } catch {
+      await log("Could not show editor context menu");
+    }
   });
   main.on("close", (e) => {
     if (!closeAllowed) {
@@ -413,6 +456,10 @@ async function initialise() {
     ipcMain.on(`beast:${name}`, (e) => {
       if (e.sender === main.webContents) fn();
     });
+  handle("spellCheck", (input: unknown) => {
+    const words = z.array(z.string().max(100)).max(10000).parse(input);
+    return spelling.check(words, preferences.settings.spellLanguage);
+  });
   handle("bootstrap", async () => ({
     spellingReady,
     settings: preferences.settings,
@@ -422,9 +469,7 @@ async function initialise() {
       .filter((n) => n.endsWith(".beasttext"))
       .map((n) => ({ id: n, name: n.replace(".beasttext", "") })),
     version: app.getVersion(),
-    spelling: session.defaultSession.availableSpellCheckerLanguages.filter(
-      (l) => ["en-US", "en-GB"].includes(l),
-    ),
+    spelling: ["en-US", "en-GB"],
     session: preferences.settings.restoreSession ? preferences.session : [],
     launchPaths: process.argv
       .slice(app.isPackaged ? 1 : 2)

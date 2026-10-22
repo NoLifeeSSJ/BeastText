@@ -35,11 +35,11 @@ Renderer isolation and sandboxing are enabled. CSP restricts scripts to local bu
 
 Native writes use a same-directory exclusive temporary file, file flush, close and rename. A content hash detects changes since open/save. A conflict offers Save As or cancel. Backups contain previous native files, separately from periodic recovery snapshots and user documents. Diagnostics record operation/error categories, never document text or full process environments.
 
-A small loopback server serves only the two bundled `.bdic` filenames to Electron's spellchecker; it does not expose documents or file-system paths and requires no Internet connection. Personal dictionary entries use Electron's persistent dictionary API.
+A small loopback server serves only the two bundled `.bdic` filenames to Electron's spellchecker; it does not expose documents or file-system paths and requires no Internet connection. Portable nspell checking uses bundled SCOWL affix/word dictionaries through a bounded local IPC provider, independent of native Windows suggestions. The context menu uses local corrections and a guarded editor word hit-test when the native event omits its word. Personal additions are saved atomically per user and also forwarded to Electron's dictionary API. The older BDIC files remain as a native fallback.
 
 ## Dependencies and sources checked
 
-Package versions and licences were checked against npm metadata on 22 October 2026, then pinned in `package-lock.json`. `docs/THIRD_PARTY.json` lists the installed dependency inventory; original licences ship with the runtime/dependencies. MIT: Electron, Tiptap, docx, fflate, React; BSD-2-Clause: Mammoth; DOMPurify is dual Apache-2.0/MPL-2.0. Development tooling has its own licence notices.
+Package versions and licences were checked against npm metadata on 22 October 2026, then pinned in `package-lock.json`. `docs/THIRD_PARTY.json` lists the installed dependency inventory; original licences ship with the runtime/dependencies. MIT: Electron, Tiptap, docx, fflate, React and nspell; bundled SCOWL dictionary data is MIT/BSD; BSD-2-Clause: Mammoth; DOMPurify is dual Apache-2.0/MPL-2.0. Development tooling has its own licence notices.
 
 Authoritative documentation consulted:
 

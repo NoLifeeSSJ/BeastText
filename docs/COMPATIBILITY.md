@@ -22,4 +22,4 @@ DOCX conversion is deliberately a subset, not a Microsoft Word layout clone. It 
 
 HTML passes DOMPurify plus style/URL filters; remote images, scripts, event attributes and embedded frames are discarded. No remote content is fetched. Export embeds raster assets as data URIs. TXT and Markdown exports show a loss notice and always write separate files. Keep the native file as the authoritative version.
 
-Spelling: bundled US/UK English local dictionaries, right-click suggestions and personal dictionary. No grammar service or AI dependency. Other languages require a future bundled dictionary update.
+Spelling: bundled US/UK English local nspell/SCOWL dictionaries, right-click suggestions and a persistent personal dictionary. Checking and corrections are provided locally across Windows and Linux rather than relying on native Windows suggestions. No grammar service or AI dependency. Other languages require a future bundled dictionary update.

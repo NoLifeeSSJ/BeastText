@@ -1,0 +1,9 @@
+{
+  "engine": "nspell 2.1.5 (MIT)",
+  "dictionaries": {
+    "en-US": "dictionary-en 4.0.0 (MIT AND BSD)",
+    "en-GB": "dictionary-en-gb 3.0.0 (MIT AND BSD)"
+  },
+  "source": "https://github.com/wooorm/dictionaries",
+  "notices": "licenses/dictionary-en.txt and licenses/dictionary-en-gb.txt"
+}

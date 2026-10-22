@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { closeHistory } from "@tiptap/pm/history";
 import { generateJSON, Editor } from "@tiptap/core";
@@ -1265,8 +1271,9 @@ function Workspace({
     },
     [],
   );
-  useEffect(() => {
-    if (active && editor) editor.commands.focus();
+  useLayoutEffect(() => {
+    // Tab shortcuts must target the newly visible editor before the next key.
+    if (active && editor && !editor.isDestroyed) editor.view.focus();
   }, [active, editor]);
   useEffect(() => {
     if (search) setTimeout(() => searchInput.current?.focus(), 30);

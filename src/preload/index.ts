@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from "electron";
+import { contextBridge, ipcRenderer, webUtils, webFrame } from "electron";
 import type { Bridge } from "../shared/bridge";
 const call = (name: string, ...args: any[]) =>
   ipcRenderer.invoke(`beast:${name}`, ...args);
@@ -33,4 +33,17 @@ const api: Bridge = {
   maximise: () => ipcRenderer.send("beast:maximise"),
   close: () => ipcRenderer.send("beast:close"),
 };
+// Chromium supplies word batches; all checking stays in the local main process.
+// This avoids platform-dependent native suggestion behaviour on Windows.
+webFrame.setSpellCheckProvider("en-US", {
+  spellCheck(words, callback) {
+    const unique = [...new Set(words.filter((word) => word.length <= 100))];
+    const batches = [];
+    for (let i = 0; i < unique.length; i += 1000)
+      batches.push(call("spellCheck", unique.slice(i, i + 1000)));
+    Promise.all(batches)
+      .then((results) => callback(results.flat()))
+      .catch(() => callback([]));
+  },
+});
 contextBridge.exposeInMainWorld("beast", api);

@@ -5,7 +5,7 @@ Validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Ele
 ## Executed
 
 - TypeScript check, Vite renderer build, bundled Electron main/preload: passed.
-- Unit/integration suite: **15 tests passed**, no skips/expected failures. Native round-trip, built-in templates, ZIP safety/unsupported versions/checksums, unsafe content, Unicode counts, atomic writes/failure preservation, external fingerprints, untitled recovery, backup retention, DOCX/Markdown conversion and embedded line breaks.
+- Unit/integration suite: **17 tests passed**, no skips/expected failures. Native round-trip, built-in templates, ZIP safety/unsupported versions/checksums, unsafe content, Unicode counts, atomic writes/failure preservation, external fingerprints, untitled recovery, backup retention, DOCX/Markdown conversion embedded line breaks, local US/UK spelling and persistent personal dictionary additions.
 - Electron user journeys: **7 tests passed**, no skips/expected failures. Actual application processes and IPC/file operations; native file chooser decisions and spelling-menu presentation are stubbed; spelling results still come from Chromium.
   1. Create/format, heading, table typing/Tab navigation, image, page break, find/replace, undo/redo, native save, close and reopen with rich content preserved.
   2. Anchored comment creation, native save, external modification, refused overwrite, cancelled close.
@@ -13,7 +13,7 @@ Validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Ele
   4. Untitled recovery snapshot, process killed unexpectedly, fresh process discovers and recovers content.
   5. Untrusted HTML script/link/remote-image sanitisation, cancelled Save, original file preservation and independent tab history.
   6. Comment anchors and resolved state survive native reopen; Save a Copy preserves the active destination.
-  7. Bundled offline English dictionary initialises and supplies the correction “spelling” for “speling” through the native context-menu pipeline.
+  7. Bundled offline English checking initialises and supplies the correction “spelling” for “speling” through the application context menu; choosing it replaces the word in the real editor.
 - Production dependency audit: **0 known vulnerabilities** at check time. The discovered fflate 0.8.2 ZIP64 advisory was fixed by pinning 0.8.3 before the final build.
 - PowerShell parser validation of installer, uninstaller and Windows acceptance script: **0 parse errors**, using checksum-verified PowerShell 7.5.4. This is syntax validation, not execution of Windows integration.
 - Windows x64 ZIP cross-build: generated with Electron-builder. BeastText EXE icon/version resource editing is enabled; code signing is disabled. Release SHA-256/size metadata is generated and checked separately. No Windows execution is implied by cross-building.

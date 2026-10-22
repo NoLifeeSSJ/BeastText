@@ -52,7 +52,7 @@ The GitHub Actions Windows workflow is supplied but has **not run in this sessio
 
 Keep `package.json` and the lockfile consistent. Run tests/build and `npm audit --omit=dev` on updates. `npm run licenses` refreshes the installed licence inventory. The original archive package was upgraded to fflate 0.8.3 after the audit identified a malformed ZIP64 infinite-loop advisory in 0.8.2.
 
-Dictionaries are copied from the official Electron 45 release archive and verified against its published SHA-256. Their source and upstream COPYING/LICENSE files are in `resources/dictionaries`. Preserve those notices when redistributing. Adding a language requires a bundled BDIC, a permitted local dictionary filename and a settings language entry; no runtime cloud dependency is needed.
+Native fallback dictionaries are copied from the official Electron 45 release archive and verified against its published SHA-256. Portable checking uses nspell with dictionary-en 4.0.0 and dictionary-en-gb 3.0.0; their affix/data files and MIT/BSD notices are bundled in resources/dictionaries (see PORTABLE_SOURCE.json). Their source and upstream COPYING/LICENSE files are in `resources/dictionaries`. Preserve those notices when redistributing. Adding a language requires bundled affix/data files, an engine language mapping and a settings language entry; no runtime cloud dependency is needed.
 
 ## Publishing a GitHub prerelease
 
