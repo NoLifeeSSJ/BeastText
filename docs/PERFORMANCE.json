@@ -1,0 +1,22 @@
+{
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.19.0"
+  },
+  "document": {
+    "words": 50000,
+    "paragraphs": 500,
+    "nativeBytes": 2814,
+    "docxBytes": 14239
+  },
+  "milliseconds": {
+    "nativeEncode": 11.48492500000009,
+    "nativeDecode": 11.263191000000006,
+    "docxExport": 78.70577299999991,
+    "recoveryWrite": 10.846083000000021
+  },
+  "processRssBytes": 159969280,
+  "processRssDeltaBytes": 24154112,
+  "notes": "Single measured run, warm Node process. Desktop typing/search/render measurements are recorded separately. These measurements are not Windows performance claims."
+}

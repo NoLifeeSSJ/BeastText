@@ -1,0 +1,11 @@
+node_modules/
+dist/
+release/*
+!release/.gitkeep
+playwright-report/
+test-results/
+*.log
+.local/
+
+App/
+.BeastText-*/

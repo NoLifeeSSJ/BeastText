@@ -1,0 +1,55 @@
+{
+  "environment": {
+    "platform": "linux",
+    "electron": "45.0.0",
+    "gpu": "disabled for test",
+    "display": "Xorg dummy 1440x1000"
+  },
+  "open50000WordsMs": 148.15262800000005,
+  "search5000MatchesMs": 256.4258970000001,
+  "typing": {
+    "samples": 42,
+    "meanKeydownToDomMutationMs": 2.9238095238217197,
+    "maxKeydownToDomMutationMs": 8.900000000139698,
+    "note": "Instrumented keydown to document DOM mutation; not input-to-paint latency."
+  },
+  "largePaste": {
+    "characters": 72500,
+    "transactionAndTwoFramesMs": 28
+  },
+  "processMetrics": [
+    {
+      "type": "Browser",
+      "memory": {
+        "workingSetSize": 185260,
+        "peakWorkingSetSize": 187988
+      }
+    },
+    {
+      "type": "GPU",
+      "memory": {
+        "workingSetSize": 83456,
+        "peakWorkingSetSize": 98232
+      }
+    },
+    {
+      "type": "Utility",
+      "memory": {
+        "workingSetSize": 84184,
+        "peakWorkingSetSize": 84184
+      }
+    },
+    {
+      "type": "Tab",
+      "memory": {
+        "workingSetSize": 330016,
+        "peakWorkingSetSize": 332108
+      }
+    }
+  ],
+  "bundledSpellingLanguages": [
+    "en-GB",
+    "en-US"
+  ],
+  "notes": "One measured Linux run with a repetitive synthetic 500-paragraph document; not a Windows laptop benchmark."
+}

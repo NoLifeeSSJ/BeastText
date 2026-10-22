@@ -1,0 +1,111 @@
+{
+  "name": "beasttext",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An offline Windows writing and document workspace",
+  "author": "BeastText",
+  "license": "MIT",
+  "main": "dist/main/index.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/build-main.mjs",
+    "start": "electron .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "samples": "tsx scripts/samples.ts",
+    "package:win": "npm run build && electron-builder --win zip --x64 && node scripts/release.mjs",
+    "package:linux": "npm run build && electron-builder --linux dir --x64",
+    "licenses": "node scripts/licenses.mjs",
+    "format": "prettier --write src tests scripts *.ts *.json index.html docs/*.md README.md",
+    "benchmark": "node scripts/benchmark.mjs"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.32.0",
+    "@tiptap/extension-highlight": "3.32.0",
+    "@tiptap/extension-image": "3.32.0",
+    "@tiptap/extension-placeholder": "3.32.0",
+    "@tiptap/extension-subscript": "3.32.0",
+    "@tiptap/extension-superscript": "3.32.0",
+    "@tiptap/extension-table": "3.32.0",
+    "@tiptap/extension-text-align": "3.32.0",
+    "@tiptap/extension-text-style": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "@tiptap/react": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0",
+    "docx": "9.13.0",
+    "dompurify": "3.4.17",
+    "fflate": "0.8.3",
+    "lucide-react": "0.577.0",
+    "mammoth": "1.13.0",
+    "marked": "17.0.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "turndown": "7.2.2",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.12.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/turndown": "5.0.6",
+    "@vitejs/plugin-react": "5.1.4",
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.27.4",
+    "prettier": "3.8.1",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vitest": "4.1.0"
+  },
+  "build": {
+    "appId": "com.beastapps.beasttext",
+    "productName": "BeastText",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "resources/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": "zip",
+      "icon": "resources/beasttext.ico",
+      "signExecutable": false
+    },
+    "linux": {
+      "target": "dir",
+      "icon": "resources/beasttext.png",
+      "category": "Office"
+    },
+    "artifactName": "BeastText-${version}-${os}-${arch}.${ext}",
+    "asarUnpack": [
+      "resources/beasttext.ico"
+    ],
+    "extraFiles": [
+      {
+        "from": "Uninstall-BeastText.ps1",
+        "to": "Uninstall-BeastText.ps1"
+      },
+      {
+        "from": "README.md",
+        "to": "README.md"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE-BeastText.txt"
+      },
+      {
+        "from": "docs",
+        "to": "docs"
+      },
+      {
+        "from": "samples",
+        "to": "samples"
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "source": "https://github.com/electron/electron/releases/download/v45.0.0/hunspell_dictionaries.zip",
+  "sha256": "8bb83d71a627b82d27133a668e4fc2c59e6d9a1fed123918f9ebb49f8bdf6322",
+  "bundled": [
+    "en-US",
+    "en-GB"
+  ],
+  "licenseNotices": "licenses/"
+}
