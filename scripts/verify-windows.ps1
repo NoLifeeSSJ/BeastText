@@ -23,7 +23,7 @@ if (-not (Get-AuthenticodeSignature -FilePath $exe)) { throw 'Executable could n
 & powershell.exe -NoProfile -File (Join-Path $repo 'Install-BeastText.ps1') -Root $testRoot -ReleaseDirectory (Join-Path $repo 'release') -NoLaunch
 if ($LASTEXITCODE -ne 0) { throw 'Reinstallation failed.' }
 if ((Get-Content -LiteralPath $document -Raw) -ne 'preserve my document' -or (Get-Content -LiteralPath $sentinel -Raw) -ne 'preserve user data') { throw 'Reinstallation did not preserve data.' }
-& (Join-Path $repo 'Uninstall-BeastText.ps1') -Root $testRoot -Confirm:$false
+& (Join-Path $testRoot 'App\Uninstall-BeastText.ps1') -Root $testRoot -Confirm:$false
 if ($LASTEXITCODE -ne 0) { throw 'Uninstallation failed.' }
 if (Test-Path -LiteralPath (Join-Path $testRoot 'App')) { throw 'Application directory remained after uninstall.' }
 foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {

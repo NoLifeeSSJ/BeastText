@@ -1,12 +1,12 @@
 # Verification evidence
 
-Validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Electron 45.0.0. The requested Windows filesystem path is represented by `/workspace/BeastText` in this machine. This report distinguishes executed checks from the remaining Windows release gate.
+Local validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Electron 45.0.0. GitHub Actions then ran the build, 17 unit tests, all 7 Electron user journeys and Windows packaging on **22–23 October 2026, Windows x64**. The requested Windows filesystem path is represented by `/workspace/BeastText` on the Linux machine.
 
 ## Executed
 
 - TypeScript check, Vite renderer build, bundled Electron main/preload: passed.
 - Unit/integration suite: **17 tests passed**, no skips/expected failures. Native round-trip, built-in templates, ZIP safety/unsupported versions/checksums, unsafe content, Unicode counts, atomic writes/failure preservation, external fingerprints, untitled recovery, backup retention, DOCX/Markdown conversion embedded line breaks, local US/UK spelling and persistent personal dictionary additions.
-- Electron user journeys: **7 tests passed**, no skips/expected failures. Actual application processes and IPC/file operations; native file chooser decisions and spelling-menu presentation are stubbed; spelling results still come from Chromium.
+- Electron user journeys: **7 tests passed on Linux and Windows**, no skips/expected failures. Actual application processes and IPC/file operations; native file chooser decisions and spelling-menu presentation are stubbed; spelling results come from the bundled offline dictionaries and application menu actions.
   1. Create/format, heading, table typing/Tab navigation, image, page break, find/replace, undo/redo, native save, close and reopen with rich content preserved.
   2. Anchored comment creation, native save, external modification, refused overwrite, cancelled close.
   3. Actual PDF and DOCX export; generated PDF opens in print-preview window.
@@ -37,15 +37,18 @@ npm run package:win
 
 Use an existing display or Xvfb on other Linux systems. `scripts/cloud-display.sh` starts this machine's available Xorg dummy driver if needed. Tests use temporary profiles and no real user documents. Source/dependency/build changes require rerunning affected tests; formatting-only evidence changes do not.
 
-## Windows acceptance — not executed here
+## Windows automation and remaining manual acceptance
 
-The provided GitHub Actions Windows workflow and `scripts/verify-windows.ps1` have not run in this session. Before certifying the release:
+The GitHub Actions workflow gates tagged publication on build, unit tests, Electron user journeys, native Windows packaging, and `scripts/verify-windows.ps1`. That script installs to a root containing spaces/apostrophes, inspects the real Start menu target, reinstalls while checking preservation of documents/user data, and uninstalls while checking removal of the app and owned shortcuts. It uses Windows PowerShell 5.1 for installation/reinstallation. Failed checks prevent release publication; installer errors are retained as workflow annotations.
 
-- Execute the local installer on supported x64 Windows 10/11, with spaces/apostrophes in the root.
+The passing Windows desktop run for the application code is [39874645140](https://github.com/NoLifeeSSJ/BeastText/actions/runs/39874645140); its original installer assertion exposed an 8.3-path discrepancy which the subsequent patch corrects. The corrected installer checks passed in [39875833022](https://github.com/NoLifeeSSJ/BeastText/actions/runs/39875833022). The release's tag run is the authoritative result for its complete publication gate.
+
+Before certifying full manual Windows acceptance:
+
+- Exercise the installer on end-user Windows 10/11 machines and test the optional `.beasttext` association.
 - Launch the installed application from the Start menu/desktop shortcut and open a launch-path document; test a second launch routing files to the existing instance.
 - Repeat core document workflows in the packaged application, including drag/drop, native picker cancellation, clipboard images/plain paste, high DPI, keyboard-only dialogs and Windows IME composition.
-- Install again and confirm preservation of documents/settings/recovery; force an update failure and confirm rollback.
-- Run uninstall and confirm only app files/owned shortcuts/owned association entries are removed; separately test the explicit RemoveUserData option.
+- Force an update failure and confirm rollback; separately test the explicit RemoveUserData option.
 - Inspect representative DOCX in an independent viewer and print the PDF/print path to physical hardware if physical printing is to be certified.
 
-Known scope/feature limitations remain in KNOWN_LIMITATIONS.md. Windows execution, signing and online publication were not invented or reported as completed.
+Known scope/feature limitations remain in KNOWN_LIMITATIONS.md. The application is unsigned. Automated Windows execution does not certify IME, accessibility, third-party Word fidelity or physical printing.

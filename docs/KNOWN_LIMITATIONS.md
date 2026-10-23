@@ -1,6 +1,6 @@
 # Known limitations and release gates
 
-This is a working V1 implementation and a cross-built unsigned Windows x64 package. It is **not yet certified on Windows**. Do not describe the full requested definition of done as verified until the Windows acceptance checklist in TESTING.md is completed.
+This is a working V1 implementation and an unsigned Windows x64 prerelease. Automated Linux and Windows desktop checks run, but full manual Windows acceptance remains incomplete. Do not describe the full requested definition of done as verified until the remaining checklist in TESTING.md is completed.
 
 - Continuous editor; exact pages and page counts exist only in PDF preview/output. Fit-page controls adjust display scale; they do not create an on-screen paginated editor.
 - Direct printing uses Chromium margin boxes for headers/footers and real page counters; PDF preview is the preferred way to inspect the final result. No physical printer was tested here.
@@ -12,7 +12,7 @@ This is a working V1 implementation and a cross-built unsigned Windows x64 packa
 - DOCX limitations and lossy-format warnings are documented in COMPATIBILITY.md. Custom paragraph style appearance does not round-trip perfectly through Word. Native files preserve the advertised native features.
 - Typewriter scrolling and a word goal are available. There is no long-document virtualisation. Performance figures are measured on the Linux build machine, not a typical Windows laptop. Large content is processed with safety limits, but some conversion/ZIP work is synchronous in the main process.
 - US/UK English dictionaries are bundled. No cloud spelling/grammar service. IME composition relies on the upstream Chromium/ProseMirror pipeline and still needs manual Windows IME verification.
-- Multi-launch file routing, drag-and-drop paths and Windows shortcuts are implemented, but need Windows execution tests. Minimum window is 900×640; smaller desktop windows are not supported.
+- Multi-launch file routing and drag-and-drop paths need manual packaged-Windows checks. Windows shortcut creation/removal is covered by installer automation. Minimum window is 900×640; smaller desktop windows are not supported.
 - The Windows package is unsigned. The EXE has BeastText icon/version metadata; publisher signing and SmartScreen reputation still require a release signing step. No certificate/account was invented.
-- Local installer is provided; no online release has been published and no download-and-run URL is claimed. Installer syntax is tested; Windows install/reinstall/uninstall/registry behaviour is still a release gate.
+- Tagged GitHub Releases provide the ZIP, checksum metadata and PowerShell installers after automated checks pass. Optional registry associations, rollback failure injection and explicit user-data removal need separate manual acceptance.
 - Source lives in `/workspace/BeastText` on this host. `C:\BeastTextV1` is the documented Windows destination; a Linux machine cannot create that actual Windows installation or run the Windows EXE.

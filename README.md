@@ -2,11 +2,22 @@
 
 An offline desktop document workspace with structured editing, native document storage, recovery and useful conversion. Built with Electron, React and Tiptap / ProseMirror. No Word installation, account, subscription, API key or browser tab required.
 
-**Release status:** Windows x64 archive is built in `release/`. Linux desktop workflows are tested; Windows installer/shortcut/IME/physical-printer acceptance is outstanding. See [test evidence](docs/TESTING.md) and [known limitations](docs/KNOWN_LIMITATIONS.md).
+**Release status:** An unsigned Windows x64 prerelease, built and checked by GitHub Actions. Desktop workflows are tested on Linux and Windows. Manual Windows IME, high-DPI and physical-printer acceptance remains outstanding. See [test evidence](docs/TESTING.md) and [known limitations](docs/KNOWN_LIMITATIONS.md).
 
 ## Install on Windows
 
-Copy this project/release bundle to `C:\BeastTextV1`. Keep the packaged archive and `release.json` together in `release\`. In PowerShell:
+Download and run the installer from the [1.0.4 release](https://github.com/NoLifeeSSJ/BeastText/releases/tag/v1.0.4). In PowerShell:
+
+```powershell
+$base = 'https://github.com/NoLifeeSSJ/BeastText/releases/download/v1.0.4'
+$installer = Join-Path $env:TEMP 'Install-BeastText.ps1'
+Invoke-WebRequest -UseBasicParsing "$base/Install-BeastText.ps1" -OutFile $installer
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -ManifestUrl "$base/release.json" -DesktopShortcut -Launch
+```
+
+The execution-policy option applies only to that PowerShell process. It does not change machine policy. Organisation-enforced policies still apply. You can inspect the [installer source](Install-BeastText.ps1) first.
+
+For an offline install, download `Install-BeastText.ps1`, `release.json` and the ZIP into the same folder, then run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-BeastText.ps1 -DesktopShortcut -Launch` there. For a source checkout with the archive/metadata in `release\`:
 
 ```powershell
 cd C:\BeastTextV1
@@ -29,7 +40,7 @@ Uninstall while preserving documents and user data:
 .\Uninstall-BeastText.ps1 -Root C:\BeastTextV1
 ```
 
-`-RemoveUserData` is a separate, explicit request to remove `%APPDATA%\BeastText` settings, recovery, backups and templates. Source and documents remain outside `App`. There is no published online installer URL yet; do not use an invented download command.
+`-RemoveUserData` is a separate, explicit request to remove `%APPDATA%\BeastText` settings, recovery, backups and templates. Source and documents remain outside `App`. Source and documentation are stored in Git; built ZIPs and installers are attached to GitHub Releases.
 
 ## Write and save
 
