@@ -1,4 +1,4 @@
-name: Diagnose Windows installer
+name: Verify Windows installer path handling
 on:
   push:
     paths: [.github/workflows/diagnose-installer.yml]

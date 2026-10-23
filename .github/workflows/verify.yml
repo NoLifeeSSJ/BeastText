@@ -26,7 +26,24 @@ jobs:
       - run: npm run package:win
       - name: Install, reinstall, shortcut and uninstall checks
         shell: pwsh
-        run: ./scripts/verify-windows.ps1
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            ./scripts/verify-windows.ps1
+            if ($LASTEXITCODE -ne 0) { throw "Installer verification exited $LASTEXITCODE" }
+          } catch {
+            $message = ($_ | Out-String) + $_.ScriptStackTrace
+            $escaped = $message.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Host "::error::$escaped"
+            Get-ChildItem -Path $env:TEMP -Filter 'BeastText-install-*.log' |
+              Sort-Object LastWriteTime -Descending | Select-Object -First 2 |
+              ForEach-Object {
+                $detail = Get-Content -LiteralPath $_.FullName -Raw
+                $detail = $detail.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+                Write-Host "::error::Installer log: $detail"
+              }
+            throw
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

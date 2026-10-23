@@ -34,6 +34,24 @@ try {
     Write-Status ('Installing BeastText in ' + $target)
     Write-Status ('Installation log: ' + $log)
     New-Item -ItemType Directory -Force -Path $Root | Out-Null
+    # Windows shortcuts and process paths expand 8.3 names (for example RUNNER~1).
+    # Use the same long path for ownership checks, shortcuts and registry entries.
+    if (-not ('BeastTextPaths' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public static class BeastTextPaths {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern uint GetLongPathName(string path, StringBuilder result, uint capacity);
+}
+'@
+    }
+    $longRoot = New-Object Text.StringBuilder 32768
+    $longLength = [BeastTextPaths]::GetLongPathName($Root, $longRoot, $longRoot.Capacity)
+    if ($longLength -eq 0 -or $longLength -ge $longRoot.Capacity) { throw 'Cannot resolve the installation folder.' }
+    $Root = $longRoot.ToString()
+    $target = Join-Path $Root 'App'
     $probe = Join-Path $Root ('.write-test-' + [Guid]::NewGuid().ToString('N'))
     try { [IO.File]::WriteAllText($probe, 'test'); Remove-Item -LiteralPath $probe }
     catch { throw ('Cannot write to ' + $Root + '. Choose a writable folder with -Root. Administrator access is not normally required.') }
