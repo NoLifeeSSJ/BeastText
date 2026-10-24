@@ -92,6 +92,12 @@ import {
 import { defaults, Settings, Recent, Bootstrap } from "../shared/bridge";
 import { templates, fromTemplate } from "../shared/templates";
 import { documentCss } from "../shared/html";
+import FileMenu, { type FileView } from "./FileMenu";
+import {
+  editableFormatForPath,
+  type EditableFormat,
+  type DocumentFormat,
+} from "../shared/formats";
 import {
   editorExtensions,
   findMatches,
@@ -359,6 +365,9 @@ export default function App() {
     [settings, setSettings] = useState<Settings>({ ...defaults }),
     [recents, setRecents] = useState<Recent[]>([]),
     [showSettings, setShowSettings] = useState(false),
+    [fileView, setFileView] = useState<FileView | null>(null),
+    [fileBusy, setFileBusy] = useState(false),
+    [resolvedTheme, setResolvedTheme] = useState("light"),
     [askState, setAskState] = useState<{
       ask: Ask;
       resolve: (x: any) => void;
@@ -402,13 +411,27 @@ export default function App() {
     [notify],
   );
   useEffect(() => {
-    document.documentElement.dataset.theme =
-      settings.theme === "system"
-        ? matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : settings.theme;
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const theme =
+        settings.theme === "system"
+          ? media.matches
+            ? "dark"
+            : "light"
+          : settings.theme;
+      document.documentElement.dataset.theme = theme;
+      setResolvedTheme(theme);
+    };
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
   }, [settings.theme]);
+  const changeTheme = (theme: Settings["theme"]) =>
+    void run(async () => {
+      const next = { ...settings, theme };
+      await window.beast.settings(next);
+      setSettings(next);
+    });
   const add = useCallback(
     (
       doc: BeastDocument,
@@ -434,6 +457,7 @@ export default function App() {
   );
   const create = useCallback(
     (id = "blank") => {
+      setFileView(null);
       const d = fromTemplate(id);
       d.styles.Normal.fontFamily = settings.font;
       d.styles.Normal.fontSize = settings.fontSize;
@@ -474,10 +498,12 @@ export default function App() {
         : undefined;
       if (existing) {
         setActive(existing.key);
+        setFileView(null);
         return;
       }
       const result = await window.beast.open(file);
       if (!result) return;
+      setFileView(null);
       const duplicate = tabsRef.current.find((t) => t.path === result.path);
       if (duplicate) {
         setActive(duplicate.key);
@@ -556,13 +582,24 @@ export default function App() {
     [add, ask],
   );
   const save = useCallback(
-    async (key = activeRef.current, mode: "save" | "as" | "copy" = "save") => {
+    async (
+      key = activeRef.current,
+      mode: "save" | "as" | "copy" = "save",
+      format?: EditableFormat,
+    ) => {
       const t = tabsRef.current.find((t) => t.key === key);
       if (!t || saveLocks.current.has(t.key)) return false;
       saveLocks.current.add(t.key);
       try {
-        const result = await window.beast.save(t.doc, t.path, t.baseline, mode);
+        const result = await window.beast.save(
+          t.doc,
+          t.path,
+          t.baseline,
+          mode,
+          format ?? editableFormatForPath(t.path) ?? "beasttext",
+        );
         if (!result) return false;
+        setFileView(null);
         if (mode !== "copy")
           setTabs((ts) =>
             ts.map((x) =>
@@ -611,6 +648,7 @@ export default function App() {
       const remaining = tabsRef.current.filter((t) => t.key !== key);
       tabsRef.current = remaining;
       setTabs(remaining);
+      setFileView(null);
       if (activeRef.current === key) setActive(remaining.at(-1)?.key ?? null);
       return true;
     },
@@ -681,6 +719,7 @@ export default function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.closest("dialog")) return;
+      if (e.key === "Escape") setFileView(null);
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
       const k = e.key.toLowerCase();
@@ -689,8 +728,10 @@ export default function App() {
         e.stopPropagation();
         if (k === "n") create();
         if (k === "o") void run(() => open());
-        if (k === "s")
-          void run(() => save(activeRef.current, e.shiftKey ? "as" : "save"));
+        if (k === "s") {
+          if (e.shiftKey && activeRef.current) setFileView("saveAs");
+          else void run(() => save());
+        }
         if (k === "p") {
           const t = tabsRef.current.find((t) => t.key === activeRef.current);
           if (t) void run(() => window.beast.print(t.doc, false));
@@ -717,10 +758,15 @@ export default function App() {
     const tab = tabsRef.current.find((t) => t.key === activeRef.current);
     if (name === "new") return create();
     if (name === "open") return open();
-    if (name === "home") return setActive(null);
+    if (name === "home") {
+      setFileView(null);
+      return setActive(null);
+    }
+    if (name === "file") return setFileView("home");
+    if (name === "as") return setFileView("saveAs");
     if (name === "settings") return setShowSettings(true);
     if (name === "save") return save();
-    if (name === "as" || name === "copy") return save(activeRef.current, name);
+    if (name === "copy") return save(activeRef.current, "copy");
     if (name === "close" && tab) return closeTab(tab.key);
     if (name === "about")
       return ask({
@@ -759,9 +805,29 @@ export default function App() {
         ...ts.filter((t) => t.id !== result.id),
         result,
       ]);
+      setFileView(null);
       notify("Saved as a reusable template.");
     }
   };
+  const saveInFormat = (format: DocumentFormat) =>
+    void run(async () => {
+      if (fileBusy) return;
+      const tab = tabsRef.current.find((t) => t.key === activeRef.current);
+      if (!tab) return;
+      setFileBusy(true);
+      try {
+        if (format === "pdf") {
+          const result = await window.beast.export(tab.doc, "pdf");
+          if (result) {
+            setFileView(null);
+            notify("PDF copy saved. Your editable document is unchanged.");
+          }
+        } else await save(tab.key, "as", format);
+      } finally {
+        setFileBusy(false);
+      }
+    });
+  const fileTab = tabs.find((tab) => tab.key === active);
   const updateRecent = (a: "pin" | "remove" | "clear" | "reveal", p?: string) =>
     void run(async () => setRecents(await window.beast.recent(a, p)));
   return (
@@ -781,7 +847,10 @@ export default function App() {
       <header className="titlebar">
         <button
           className="brand"
-          onClick={() => setActive(null)}
+          onClick={() => {
+            setFileView(null);
+            setActive(null);
+          }}
           title="BeastText home"
         >
           <span className="brand-symbol">
@@ -798,6 +867,25 @@ export default function App() {
           {active && tabs.find((t) => t.key === active)?.dirty ? "•" : ""}
         </span>
         <div className="titlebar-actions">
+          <button
+            className="theme-toggle"
+            aria-label={
+              resolvedTheme === "dark"
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+            title={
+              resolvedTheme === "dark"
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+            aria-pressed={resolvedTheme === "dark"}
+            onClick={() =>
+              changeTheme(resolvedTheme === "dark" ? "light" : "dark")
+            }
+          >
+            {resolvedTheme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
           <button
             aria-label="Minimise window"
             onClick={() => window.beast.minimise()}
@@ -824,7 +912,10 @@ export default function App() {
           <button
             className={!active ? "home-tab active" : "home-tab"}
             aria-label="Start screen"
-            onClick={() => setActive(null)}
+            onClick={() => {
+              setFileView(null);
+              setActive(null);
+            }}
           >
             <FileText size={16} />
           </button>
@@ -836,7 +927,10 @@ export default function App() {
               <button
                 role="tab"
                 aria-selected={active === t.key}
-                onClick={() => setActive(t.key)}
+                onClick={() => {
+                  setFileView(null);
+                  setActive(t.key);
+                }}
               >
                 <FileText size={14} />
                 <span>{t.doc.title}</span>
@@ -1104,15 +1198,32 @@ export default function App() {
           </main>
         </div>
       ) : null}
+      {fileView && fileTab && (
+        <FileMenu
+          view={fileView}
+          onView={setFileView}
+          title={fileTab.doc.title}
+          file={fileTab.path}
+          dirty={fileTab.dirty}
+          recents={recents}
+          theme={settings.theme}
+          onTheme={changeTheme}
+          onBack={() => setFileView(null)}
+          onAction={(name) => void run(() => action(name))}
+          onOpen={(file) => void run(() => open(file))}
+          onSaveAs={saveInFormat}
+          busy={fileBusy}
+        />
+      )}
       {tabs.map((t) => (
         <div
           className="workspace-container"
           key={t.key}
-          hidden={active !== t.key}
+          hidden={active !== t.key || !!fileView}
         >
           <Workspace
             tab={t}
-            active={active === t.key}
+            active={active === t.key && !fileView}
             settings={settings}
             update={(changes) => update(t.key, changes)}
             action={(name, format) => void run(() => action(name, format))}
@@ -1772,10 +1883,7 @@ function Workspace({
   return (
     <div className={`workspace ${focus ? "focus-mode" : ""}`}>
       <div className="commandbar">
-        <button
-          className="file-tab"
-          onClick={() => setShelf(shelf === "File" ? "Home" : "File")}
-        >
+        <button className="file-tab" onClick={() => action("file")}>
           File <ChevronDown size={13} />
         </button>
         {["Home", "Insert", "Layout", "Review", "View"].map((name) => (
@@ -1811,97 +1919,12 @@ function Workspace({
             label="Print (Ctrl+P)"
             onClick={() => action("print")}
           />
-          <button className="export-button" onClick={() => setShelf("File")}>
-            <Download size={15} /> Export
+          <button className="export-button" onClick={() => action("as")}>
+            <Save size={15} /> Save as
           </button>
         </div>
       </div>
       <div className="ribbon" aria-label={`${shelf} commands`}>
-        {shelf === "File" ? (
-          <>
-            <div className="ribbon-group">
-              <div className="tool-row">
-                <Button
-                  icon={FilePlus2}
-                  label="New document (Ctrl+N)"
-                  onClick={() => action("new")}
-                >
-                  New
-                </Button>
-                <Button
-                  icon={FolderOpen}
-                  label="Open (Ctrl+O)"
-                  onClick={() => action("open")}
-                >
-                  Open
-                </Button>
-                <Button
-                  icon={Save}
-                  label="Save (Ctrl+S)"
-                  onClick={() => action("save")}
-                >
-                  Save
-                </Button>
-                <Button
-                  icon={Copy}
-                  label="Save As (Ctrl+Shift+S)"
-                  onClick={() => action("as")}
-                >
-                  Save As
-                </Button>
-                <Button
-                  icon={Copy}
-                  label="Save a Copy"
-                  onClick={() => action("copy")}
-                >
-                  Save a copy
-                </Button>
-              </div>
-              <small>Document</small>
-            </div>
-            <div className="ribbon-group">
-              <div className="tool-row">
-                {["docx", "pdf", "html", "md", "txt"].map((f) => (
-                  <button
-                    className="format-export"
-                    key={f}
-                    onClick={() => action("export", f)}
-                  >
-                    {f.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              <small>Export a separate file</small>
-            </div>
-            <div className="ribbon-group">
-              <div className="tool-row">
-                <Button
-                  icon={Eye}
-                  label="Paginated print preview"
-                  onClick={() => action("preview")}
-                >
-                  Preview
-                </Button>
-                <Button
-                  icon={Printer}
-                  label="Print document"
-                  onClick={() => action("print")}
-                />
-                <Button
-                  icon={FilePlus2}
-                  label="Save as reusable template"
-                  onClick={() => action("template")}
-                />
-                <Button
-                  icon={X}
-                  label="Close current document"
-                  onClick={() => action("close")}
-                />
-              </div>
-              <small>Finish & share</small>
-            </div>
-          </>
-        ) : null}
         {shelf === "Home" ? (
           <>
             <div className="ribbon-group clipboard-group">

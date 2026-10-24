@@ -46,7 +46,7 @@ npm run package:win
 
 Electron-builder creates a self-contained x64 ZIP and edits BeastText icon/version metadata. Code signing is deliberately disabled until a real signing certificate is configured. The release script generates `release.json` (file, size, SHA-256) and copies installer scripts. Never replace release hashes just to make an untrusted download pass: regenerate only from a newly built, verified artifact. Installer/update paths remain separate from source and per-user data.
 
-The GitHub Actions Windows workflow is supplied but has **not run in this session**. It builds, runs unit/Electron tests, creates the package and invokes `scripts/verify-windows.ps1` to exercise real installation/reinstallation/shortcut/uninstallation with paths containing spaces/apostrophes. The script does not claim physical-printer or IME coverage. A release must also manually launch the installed shortcut, test input composition/high DPI, preview representative documents and print to a real printer if physical printing is to be certified.
+The GitHub Actions Windows workflow published the prior prerelease after passing all gates; each new version must pass its own tag run. It builds, runs unit/Electron tests, creates the package and invokes `scripts/verify-windows.ps1` to exercise real installation/reinstallation/shortcut/uninstallation with paths containing spaces/apostrophes. The script does not claim physical-printer or IME coverage. A release must also manually launch the installed shortcut, test input composition/high DPI, preview representative documents and print to a real printer if physical printing is to be certified.
 
 ## Updating dependencies and dictionaries
 

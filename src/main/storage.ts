@@ -159,7 +159,10 @@ export class SafetyStore {
     try {
       await fs.copyFile(
         file,
-        path.join(target, `${Date.now()}-${randomUUID()}.beasttext`),
+        path.join(
+          target,
+          `${Date.now()}-${randomUUID()}${path.extname(file).toLowerCase() || ".beasttext"}`,
+        ),
       );
     } catch (e: any) {
       if (e.code !== "ENOENT") throw e;

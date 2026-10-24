@@ -1,4 +1,4 @@
-# BeastText 1.0
+# BeastText 1.1
 
 An offline desktop document workspace with structured editing, native document storage, recovery and useful conversion. Built with Electron, React and Tiptap / ProseMirror. No Word installation, account, subscription, API key or browser tab required.
 
@@ -6,11 +6,12 @@ An offline desktop document workspace with structured editing, native document s
 
 ## Install on Windows
 
-Download and run the installer from the [1.0.4 release](https://github.com/NoLifeeSSJ/BeastText/releases/tag/v1.0.4). In PowerShell:
+Download and run the installer from the [1.1.0 release](https://github.com/NoLifeeSSJ/BeastText/releases/tag/v1.1.0). In PowerShell:
 
 ```powershell
-$base = 'https://github.com/NoLifeeSSJ/BeastText/releases/download/v1.0.4'
+$base = 'https://github.com/NoLifeeSSJ/BeastText/releases/download/v1.1.0'
 $installer = Join-Path $env:TEMP 'Install-BeastText.ps1'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Invoke-WebRequest -UseBasicParsing "$base/Install-BeastText.ps1" -OutFile $installer
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -ManifestUrl "$base/release.json" -DesktopShortcut -Launch
 ```
@@ -46,7 +47,11 @@ Uninstall while preserving documents and user data:
 
 Create a blank document or choose one of twelve editable templates. Home contains text/paragraph formatting; Insert adds images, tables, links, comments, contents and page breaks. Layout controls paper, orientation, margins and headers/footers. Review provides search/replacement and comments. View offers outline, properties, focus and zoom. Click the document title to rename it.
 
-Save to `.beasttext` to preserve the complete native feature set. Import DOCX/TXT/MD/HTML into a new native document. Export separate DOCX, PDF, HTML, Markdown or plain-text files through File. Check DOCX compatibility notices. Accurate pages and generated page fields are shown in **Print preview**; editing remains continuous.
+Open **File** for a dedicated document screen with Save, Save as, recent files and Print. **File → Save as** (or **Ctrl+Shift+S**) offers Word `.docx`, plain text `.txt`, HTML, Markdown and BeastText, with a clear description of what each format preserves. Choose a format and location; subsequent **Ctrl+S** saves to that file. Cancellation keeps the current destination. Backups and external-change protection apply to all editable formats. PDF saves a separate paginated copy and keeps the editable document's destination unchanged.
+
+Use `.beasttext` to preserve the complete native feature set, including comments and styles. Imported DOCX/TXT/MD/HTML files still open as new unsaved documents to protect their originals until you explicitly choose a Save as destination. Legacy `.doc`, RTF and ODT are not supported. Accurate pages and generated page fields are shown in **File → Print → Print preview**; editing remains continuous.
+
+Use the **moon/sun button in the title bar** for one-click dark/light mode. **File → App appearance** also offers Light, Dark and System; the choice persists across restarts, and System follows appearance changes while the app is open. Dark mode changes the application interface; the document paper retains its print colours.
 
 Recovery snapshots are separate from saving. Default interval is 30 seconds, configurable in Settings. Recovery includes untitled documents; recovered work opens as a new unsaved copy. Named-file automatic saving is an independent opt-in preference. Recovery/backups/logs can be opened from document properties.
 

@@ -10,6 +10,7 @@ import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { unzipSync, strFromU8 } from "fflate";
 let app: ElectronApplication, page: Page, root: string;
 async function launch() {
   app = await electron.launch({
@@ -175,7 +176,14 @@ test("PDF and DOCX export run through the actual desktop bridge; preview opens",
   const out = path.join(root, "report.pdf");
   await nativeDialog(out);
   await page.getByRole("button", { name: "File", exact: true }).click();
-  await page.getByRole("button", { name: "PDF", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "File actions" })
+    .getByRole("button", { name: "Save as", exact: true })
+    .click();
+  await page.getByRole("button", { name: /PDF document/ }).click();
+  await page
+    .getByRole("button", { name: "Save PDF copy", exact: true })
+    .click();
   await expect
     .poll(async () =>
       fs
@@ -188,9 +196,10 @@ test("PDF and DOCX export run through the actual desktop bridge; preview opens",
   await fs.copyFile(out, "test-results/report.pdf");
   const docx = path.join(root, "report.docx");
   await nativeDialog(docx);
-  await page.getByRole("button", { name: "DOCX", exact: true }).click();
+  await page.keyboard.press("Control+Shift+s");
+  await page.getByRole("button", { name: /Word document/ }).click();
   await page
-    .getByRole("button", { name: "Export a copy", exact: true })
+    .getByRole("button", { name: "Choose location & save", exact: true })
     .click();
   await expect
     .poll(async () =>
@@ -200,8 +209,13 @@ test("PDF and DOCX export run through the actual desktop bridge; preview opens",
         .catch(() => 0),
     )
     .toBeGreaterThan(1000);
+  await page.getByRole("button", { name: "File", exact: true }).click();
   await page
-    .getByRole("button", { name: "Paginated print preview", exact: true })
+    .getByRole("navigation", { name: "File actions" })
+    .getByRole("button", { name: "Print", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Print preview", exact: true })
     .click();
   await expect.poll(() => app.windows().length).toBe(2);
 });
@@ -377,4 +391,141 @@ test("bundled offline spelling initialises and returns local suggestions", async
       .click();
   });
   await expect(editor).toHaveText("spelling ");
+});
+
+test("Save as writes real editable formats, subsequent Save keeps the destination, and cancellation preserves it", async () => {
+  await page.getByRole("button", { name: "New document", exact: true }).click();
+  const editor = page.getByRole("textbox", { name: "Document editor" });
+  await editor.fill("Document café 🐻");
+  for (const [format, name] of [
+    ["docx", "Word document"],
+    ["txt", "Plain text"],
+    ["html", "Web page"],
+    ["md", "Markdown"],
+  ]) {
+    const destination = path.join(root, "Saved draft's." + format);
+    await nativeDialog(destination);
+    await page.keyboard.press("Control+Shift+s");
+    await page.getByRole("button", { name: new RegExp(name) }).click();
+    await page
+      .getByRole("button", { name: "Choose location & save", exact: true })
+      .click();
+    await expect(editor).toBeVisible();
+    await expect(page.getByText("Document saved safely.")).toBeVisible();
+    const before = await fs.readFile(destination);
+    if (format === "docx")
+      expect(strFromU8(unzipSync(before)["word/document.xml"])).toContain(
+        "Document café 🐻",
+      );
+    else expect(before.toString("utf8")).toContain("Document café 🐻");
+    await editor.fill("Document café 🐻 updated " + format);
+    await page.keyboard.press("Control+s");
+    await expect
+      .poll(async () => (await fs.readFile(destination)).equals(before))
+      .toBe(false);
+  }
+  const current = path.join(root, "Saved draft's.md");
+  const original = await fs.readFile(current);
+  await page.keyboard.press("Control+Shift+s");
+  await page.getByRole("button", { name: /Plain text/ }).click();
+  await app.evaluate(({ dialog }) => {
+    dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
+  });
+  await page
+    .getByRole("button", { name: "Choose location & save", exact: true })
+    .click();
+  await expect(page.getByRole("region", { name: "File menu" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(editor).toBeVisible();
+  await editor.fill("The original Markdown destination is still active.");
+  await page.keyboard.press("Control+s");
+  await expect
+    .poll(async () => (await fs.readFile(current)).equals(original))
+    .toBe(false);
+  await fs.writeFile(current, "external changes");
+  await editor.fill("Do not overwrite external changes");
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = async () => ({
+      response: 1,
+      checkboxChecked: false,
+    });
+  });
+  await page.keyboard.press("Control+s");
+  await expect(
+    page.getByText("Unsaved changes", { exact: true }),
+  ).toBeVisible();
+  expect(await fs.readFile(current, "utf8")).toBe("external changes");
+  await nativeDialog(current);
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = async () => ({
+      response: 0,
+      checkboxChecked: false,
+    });
+  });
+  await page.keyboard.press("Control+s");
+  await expect(
+    page.getByText(
+      "Choose a different file to preserve the external changes.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(await fs.readFile(current, "utf8")).toBe("external changes");
+});
+
+test("visible dark mode persists, File menu returns with Escape, and System follows live appearance changes", async () => {
+  await page
+    .getByRole("button", { name: "Switch to dark mode", exact: true })
+    .click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.beast.bootstrap().then((b) => b.settings.theme),
+      ),
+    )
+    .toBe("dark");
+  await page.getByRole("button", { name: "New document", exact: true }).click();
+  const editor = page.getByRole("textbox", { name: "Document editor" });
+  await editor.fill("The file menu preserves my writing.");
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await expect(page.getByRole("region", { name: "File menu" })).toBeVisible();
+  await expect(editor).toBeHidden();
+  await page
+    .getByRole("navigation", { name: "File actions" })
+    .getByRole("button", { name: "Save as", exact: true })
+    .click();
+  await page.screenshot({
+    path: "test-results/file-save-as-dark.png",
+    animations: "disabled",
+  });
+  await page.keyboard.press("Escape");
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveText("The file menu preserves my writing.");
+  await app.evaluate(({ app }) => app.exit(0));
+  const process = app.process();
+  if (process.exitCode === null && process.signalCode === null)
+    await new Promise((resolve) => process.once("exit", resolve));
+  await launch();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: "New document", exact: true }).click();
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page
+    .getByRole("group", { name: "App appearance" })
+    .getByRole("button", { name: "System", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.beast.bootstrap().then((b) => b.settings.theme),
+      ),
+    )
+    .toBe("system");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.screenshot({
+    path: "test-results/file-menu-light.png",
+    animations: "disabled",
+  });
 });

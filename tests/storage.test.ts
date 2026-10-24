@@ -191,4 +191,16 @@ describe("file writes and recovery", () => {
       ).title,
     ).toBe("v4");
   });
+  it("preserves the original bytes and extension of non-native backups", async () => {
+    const file = path.join(root, "original.docx");
+    const bytes = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x10, 0x20]);
+    const d = newDocument();
+    await fs.writeFile(file, bytes);
+    await store.backup(file, d.id, 2);
+    const directory = path.join(root, "backups", d.id);
+    const names = await fs.readdir(directory);
+    expect(names).toHaveLength(1);
+    expect(names[0]).toMatch(/\.docx$/);
+    expect(await fs.readFile(path.join(directory, names[0]))).toEqual(bytes);
+  });
 });

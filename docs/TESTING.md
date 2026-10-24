@@ -2,7 +2,15 @@
 
 Local validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Electron 45.0.0. GitHub Actions then ran the build, 17 unit tests, all 7 Electron user journeys and Windows packaging on **22–23 October 2026, Windows x64**. The requested Windows filesystem path is represented by `/workspace/BeastText` on the Linux machine.
 
-## Executed
+## Updated file and appearance checks
+
+For 1.1.0, local Linux validation on 24 October 2026 passed the TypeScript/production build, **18 unit/integration tests** and **9 Electron desktop journeys**. The tag's Windows workflow gates publication on those same checks plus package creation and installer acceptance; its final result is authoritative for Windows release readiness.
+
+New coverage saves real DOCX/TXT/HTML/Markdown files through File → Save as, checks their contents, edits and saves again to each destination, cancels a new destination, and refuses external overwrites even when the conflicted file is reselected. A backup test checks original non-native bytes/extensions. Theme coverage clicks the visible control, restarts the application, verifies persistence, uses File/Escape without losing content, and changes emulated system appearance live. Only native chooser decisions and OS popup presentation are stubbed.
+
+Screenshots of the updated File screen are in verification/file-save-as-dark.png and verification/file-menu-light.png. Paper retains print colours in dark mode.
+
+## Original V1 evidence
 
 - TypeScript check, Vite renderer build, bundled Electron main/preload: passed.
 - Unit/integration suite: **17 tests passed**, no skips/expected failures. Native round-trip, built-in templates, ZIP safety/unsupported versions/checksums, unsafe content, Unicode counts, atomic writes/failure preservation, external fingerprints, untitled recovery, backup retention, DOCX/Markdown conversion embedded line breaks, local US/UK spelling and persistent personal dictionary additions.

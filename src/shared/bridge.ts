@@ -1,4 +1,5 @@
 import type { BeastDocument } from "./model";
+import type { EditableFormat } from "./formats";
 export type Recent = {
   path: string;
   name: string;
@@ -69,6 +70,7 @@ export type Bridge = {
     path: string | null,
     baseline: string | null,
     mode: "save" | "as" | "copy",
+    format?: EditableFormat,
   ): Promise<SaveResult>;
   export(
     doc: BeastDocument,

@@ -33,7 +33,7 @@ The editable surface is a continuous document whose width/margins match the sele
 
 Renderer isolation and sandboxing are enabled. CSP restricts scripts to local bundles and images to local/data resources. Imported links allow http(s), mailto and heading anchors; external links require user action. DOCX external file access is disabled. ZIP expansion is bounded before decompression, unsafe native entry names are rejected and assets have SHA-256 integrity checks. The original file is never modified on import or parse failure.
 
-Native writes use a same-directory exclusive temporary file, file flush, close and rename. A content hash detects changes since open/save. A conflict offers Save As or cancel. Backups contain previous native files, separately from periodic recovery snapshots and user documents. Diagnostics record operation/error categories, never document text or full process environments.
+All editable-format writes use a same-directory exclusive temporary file, file flush, close and rename. A content hash detects changes since open/save. A conflict offers Save As or cancel. Backups contain previous file bytes with their original extensions, separately from periodic recovery snapshots and user documents. Diagnostics record operation/error categories, never document text or full process environments.
 
 A small loopback server serves only the two bundled `.bdic` filenames to Electron's spellchecker; it does not expose documents or file-system paths and requires no Internet connection. Portable nspell checking uses bundled SCOWL affix/word dictionaries through a bounded local IPC provider, independent of native Windows suggestions. The context menu uses local corrections and a guarded editor word hit-test when the native event omits its word. Personal additions are saved atomically per user and also forwarded to Electron's dictionary API. The older BDIC files remain as a native fallback.
 
@@ -51,3 +51,7 @@ Authoritative documentation consulted:
 - Dictionary origin/checksum: `resources/dictionaries/SOURCE.json`; upstream notices are retained alongside the dictionaries.
 
 The documentation websites for Tiptap and Electron were blocked by the environment's network policy, so their official GitHub sources and installed declarations were used. No TLS, signature or checksum checks were disabled.
+
+## File screen and save destinations
+
+The File screen is a dedicated renderer view; document editors stay mounted while hidden so undo history and unsaved content survive navigation. Escape returns focus to the editor. The shared format catalogue provides user-facing choices and extension mapping. Main-process document serializers write actual native, DOCX, HTML, Markdown or UTF-8 text bytes and reject mismatched extensions. Save as updates the tab destination and hash only after a successful write; PDF copies leave both unchanged. Imported foreign documents stay unsaved until an explicit destination is chosen. The renderer theme observer applies remembered Light/Dark/System appearance and reacts to system changes.

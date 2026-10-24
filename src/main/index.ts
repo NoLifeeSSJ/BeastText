@@ -29,8 +29,14 @@ import {
   fingerprint,
   SafetyStore,
 } from "./storage";
-import { importDocx, exportDocx, markdownExport } from "./conversion";
+import { importDocx } from "./conversion";
 import { LocalSpelling, editorWordAtPoint } from "./spelling";
+import {
+  documentFormats,
+  editableFormatForPath,
+  type EditableFormat,
+} from "../shared/formats";
+import { documentBytes } from "./document-files";
 app.setPath("userData", path.join(app.getPath("appData"), "BeastText"));
 if (process.env.BEASTTEXT_DATA)
   app.setPath("userData", path.resolve(process.env.BEASTTEXT_DATA));
@@ -153,12 +159,17 @@ async function open(file?: string) {
   return result;
 }
 async function pickSave(d: BeastDocument, ext: string) {
+  const description =
+    documentFormats.find((format) => format.id === ext)?.name ??
+    ext.toUpperCase();
   const r = await dialog.showSaveDialog(main, {
+    title: "Save as " + description,
+    buttonLabel: "Save",
     defaultPath: path.join(
       preferences.settings.saveLocation || app.getPath("documents"),
       `${d.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_") || "Untitled"}.${ext}`,
     ),
-    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    filters: [{ name: description, extensions: [ext] }],
   });
   if (r.canceled) return null;
   return r.filePath
@@ -172,20 +183,27 @@ async function save(
   target: string | null,
   baseline: string | null,
   mode: "save" | "as" | "copy",
+  requestedFormat: EditableFormat = "beasttext",
 ) {
   let d = validateDocument(input);
   z.enum(["save", "as", "copy"]).parse(mode);
+  z.enum(["beasttext", "docx", "txt", "html", "md"]).parse(requestedFormat);
+  const format =
+    target && mode === "save" ? editableFormatForPath(target) : requestedFormat;
+  if (!format)
+    throw new Error(
+      "This file type cannot be saved. Choose Save as and a supported format.",
+    );
   if (mode === "copy") d = cloneAsNew(d);
   let file =
-    target && mode === "save"
-      ? filePath(target)
-      : await pickSave(d, "beasttext");
+    target && mode === "save" ? filePath(target) : await pickSave(d, format);
   if (!file) return null;
-  if (path.extname(file).toLowerCase() !== ".beasttext")
+  if (editableFormatForPath(file) !== format)
     throw new Error(
-      "Native saves require the .beasttext extension. Use Export for other formats.",
+      "The file extension must match the selected format: ." + format,
     );
-  const before = await fingerprint(file);
+  const bytes = await documentBytes(d, format);
+  let before = await fingerprint(file);
   if (target && mode === "save" && before !== baseline) {
     const r = await dialog.showMessageBox(main, {
       type: "warning",
@@ -198,11 +216,29 @@ async function save(
       cancelId: 1,
     });
     if (r.response === 1) return null;
-    file = await pickSave(d, "beasttext");
+    file = await pickSave(d, format);
     if (!file) return null;
+    if (editableFormatForPath(file) !== format)
+      throw new Error(
+        "The file extension must match the selected format: ." + format,
+      );
+    const previousPath = filePath(target);
+    if (
+      process.platform === "win32"
+        ? filePath(file).toLowerCase() === previousPath.toLowerCase()
+        : filePath(file) === previousPath
+    )
+      throw new Error(
+        "Choose a different file to preserve the external changes.",
+      );
+    before = await fingerprint(file);
   }
   await safety.backup(file, d.id, preferences.settings.backupRetention);
-  await atomicWrite(file, encodeNative(d));
+  if ((await fingerprint(file)) !== before)
+    throw new Error(
+      "The file changed while preparing to save. Your original file has not been overwritten. Try Save as to preserve both versions.",
+    );
+  await atomicWrite(file, bytes);
   await recent(file);
   if (mode !== "copy") await safety.clearRecovery(d.id);
   return { path: file, fingerprint: (await fingerprint(file))! };
@@ -491,16 +527,19 @@ async function initialise() {
     z.enum(["txt", "md", "html", "docx", "pdf"]).parse(format);
     const target = await pickSave(d, format);
     if (!target) return null;
+    const actual = path.extname(target).toLowerCase();
+    if (
+      format === "pdf"
+        ? actual !== ".pdf"
+        : editableFormatForPath(target) !== format
+    )
+      throw new Error(
+        "The file extension must match the selected format: ." + format,
+      );
     const bytes =
       format === "pdf"
         ? await pdf(d)
-        : format === "docx"
-          ? await exportDocx(d)
-          : format === "html"
-            ? documentHtml(d)
-            : format === "md"
-              ? markdownExport(d)
-              : textContent(d.content);
+        : await documentBytes(d, format as EditableFormat);
     await atomicWrite(target, bytes);
     return target;
   });
