@@ -51,6 +51,7 @@ jobs:
           path: |
             release/*.zip
             release/release.json
+            release/CHANGELOG.md
             release/*BeastText.ps1
             test-results/**
       - name: Publish tagged Windows prerelease
@@ -67,6 +68,8 @@ jobs:
             release/release.json `
             release/Install-BeastText.ps1 `
             release/Uninstall-BeastText.ps1 `
+            release/Update-BeastText.ps1 `
+            release/CHANGELOG.md `
             --repo $env:GITHUB_REPOSITORY `
             --verify-tag `
             --title "BeastText $version" `

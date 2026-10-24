@@ -4,12 +4,27 @@ An offline desktop document workspace with structured editing, native document s
 
 **Release status:** An unsigned Windows x64 prerelease, built and checked by GitHub Actions. Desktop workflows are tested on Linux and Windows. Manual Windows IME, high-DPI and physical-printer acceptance remains outstanding. See [test evidence](docs/TESTING.md) and [known limitations](docs/KNOWN_LIMITATIONS.md).
 
-## Install on Windows
+## Update and version history
 
-Download and run the installer from the [1.1.0 release](https://github.com/NoLifeeSSJ/BeastText/releases/tag/v1.1.0). In PowerShell:
+Close BeastText, then run this reusable PowerShell command. It finds the newest published Windows release (including prereleases), displays the full changelog and updates the default installation while preserving documents/settings:
 
 ```powershell
-$base = 'https://github.com/NoLifeeSSJ/BeastText/releases/download/v1.1.0'
+$updater = Join-Path $env:TEMP 'Update-BeastText.ps1'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/NoLifeeSSJ/BeastText/main/Update-BeastText.ps1' -OutFile $updater
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updater -DesktopShortcut -Launch
+```
+
+Add `-CheckOnly` to preview the available version and changes without installing. Use `-Version 1.1.1` to select a specific release, `-Root` for an existing custom installation, or `-ReleaseDirectory` for an offline bundle containing the ZIP, manifest, installer and CHANGELOG.md. If GitHub's anonymous API rate limit is reached, specifying `-Version` avoids release discovery. No account or API key is needed.
+
+The [complete changelog](docs/CHANGELOG.md) lists every version, including unpublished candidates. It is included in GitHub Release assets and installed at `App\docs\CHANGELOG.md`. Future releases must have a changelog entry before packaging. The [updater source](Update-BeastText.ps1) is available for inspection.
+
+## Install on Windows
+
+Download and run the installer from the [1.1.1 release](https://github.com/NoLifeeSSJ/BeastText/releases/tag/v1.1.1). In PowerShell:
+
+```powershell
+$base = 'https://github.com/NoLifeeSSJ/BeastText/releases/download/v1.1.1'
 $installer = Join-Path $env:TEMP 'Install-BeastText.ps1'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Invoke-WebRequest -UseBasicParsing "$base/Install-BeastText.ps1" -OutFile $installer

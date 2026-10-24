@@ -57,3 +57,7 @@ Native fallback dictionaries are copied from the official Electron 45 release ar
 ## Publishing a GitHub prerelease
 
 Push a version tag matching `package.json`, for example `v1.0.0`. The Windows workflow runs the build, unit/Electron tests and installer acceptance, then uploads the ZIP, `release.json` and both PowerShell scripts to a GitHub prerelease. Its job-scoped GitHub Actions token has repository-content write permission; no personal token is stored in source. Tag creation requests publication; a tag alone is not evidence that the workflow passed or the assets are available. Check the workflow and release before distributing download commands. Large generated archives belong in Release assets, not Git history.
+
+## Version history and updates
+
+Add every version to docs/CHANGELOG.md when bumping package.json. Packaging refuses a version without an entry, copies the cumulative history/updater into the release folder and includes documentation in the app ZIP. The Windows workflow publishes the updater and history alongside the existing ZIP/manifest/installers. Update-BeastText.ps1 includes prereleases when finding the newest published version, supports pinned/offline updates, displays the full history and delegates archive verification/application replacement to the installer. Never label a failed release candidate as published.

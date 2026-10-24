@@ -2,6 +2,10 @@
 
 Local validation was performed on **22 October 2026, Linux x64**, Node 24.19.0 and Electron 45.0.0. GitHub Actions then ran the build, 17 unit tests, all 7 Electron user journeys and Windows packaging on **22–23 October 2026, Windows x64**. The requested Windows filesystem path is represented by `/workspace/BeastText` on the Linux machine.
 
+## Updater and cumulative history
+
+Version 1.1.1 adds PowerShell parser checks for the updater and an offline CheckOnly exercise. Windows release acceptance checks anonymous online release discovery/history preview, reinstalls using the packaged offline updater with a root containing spaces/apostrophes, compares the entire installed changelog to the source history, and checks document/user-data preservation and uninstallation. The app code is unchanged from 1.1.0; the release workflow still runs the 18 unit and nine desktop checks before publication.
+
 ## Updated file and appearance checks
 
 For 1.1.0, local Linux validation on 24 October 2026 passed the TypeScript/production build, **18 unit/integration tests** and **9 Electron desktop journeys**. The tag's Windows workflow gates publication on those same checks plus package creation and installer acceptance; its final result is authoritative for Windows release readiness.

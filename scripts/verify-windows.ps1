@@ -20,8 +20,14 @@ if ($files.GetFile($shortcut.TargetPath).ShortPath -ne $files.GetFile($exe).Shor
     throw "Start menu shortcut target '$($shortcut.TargetPath)' does not resolve to '$exe'."
 }
 if (-not (Get-AuthenticodeSignature -FilePath $exe)) { throw 'Executable could not be inspected.' }
-& powershell.exe -NoProfile -File (Join-Path $repo 'Install-BeastText.ps1') -Root $testRoot -ReleaseDirectory (Join-Path $repo 'release') -NoLaunch
-if ($LASTEXITCODE -ne 0) { throw 'Reinstallation failed.' }
+& powershell.exe -NoProfile -File (Join-Path $repo 'Update-BeastText.ps1') -CheckOnly
+if ($LASTEXITCODE -ne 0) { throw 'Online update/version-history check failed.' }
+& powershell.exe -NoProfile -File (Join-Path $repo 'Update-BeastText.ps1') -Root $testRoot -ReleaseDirectory (Join-Path $repo 'release')
+if ($LASTEXITCODE -ne 0) { throw 'Updater reinstallation failed.' }
+$history = Get-Content -LiteralPath (Join-Path $testRoot 'App\docs\CHANGELOG.md') -Raw -Encoding UTF8
+if ($history -ne (Get-Content -LiteralPath (Join-Path $repo 'docs\CHANGELOG.md') -Raw -Encoding UTF8)) {
+    throw 'The installed changelog does not match the complete source history.'
+}
 if ((Get-Content -LiteralPath $document -Raw) -ne 'preserve my document' -or (Get-Content -LiteralPath $sentinel -Raw) -ne 'preserve user data') { throw 'Reinstallation did not preserve data.' }
 & (Join-Path $testRoot 'App\Uninstall-BeastText.ps1') -Root $testRoot -Confirm:$false
 if ($LASTEXITCODE -ne 0) { throw 'Uninstallation failed.' }
